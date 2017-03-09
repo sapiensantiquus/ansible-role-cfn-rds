@@ -1,0 +1,15 @@
+- name: Create app user security group
+  ec2_group:
+    name: "ansible-rds-cfn-sg-{{ item.name }}"
+    description: Security Group for creating DB user
+    rules:
+      - proto: tcp
+        from_port: "{{ rds_port }}"
+        to_port: "{{ rds_port }}"
+        cidr_ip: "{{ item.cidr }}"
+    region: "{{ rds_region }}"
+    vpc_id: "{{ rds_vpc }}"
+    state: "{{ sg_state }}"
+  with_items: "{{ rds_sg_groups | default(omit) }}"
+  when: rds_create_app_user == 'yes'
+  register: rds_create_app_user_sg

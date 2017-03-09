@@ -1,0 +1,425 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "{{ rds_description | default('Some kind of RDS cluster') }}",
+  "Parameters": {
+    {% if rds_deployment_type == 'cluster' %}
+    "ClusterAZs":{
+      "Type": "List<AWS::EC2::AvailabilityZone::Name>"
+    },
+    "ClusterParameterGroupName": {
+      "Type": "String"
+    },
+    {% elif rds_deployment_type == 'instance' %}
+    "AllocatedStorage": {
+      "Type": "Number"
+    },
+    "StorageType":{
+      "Type": "String",
+      "AllowedValues": [
+        "standard",
+        "io1",
+        "gp2"
+      ]
+    },
+    "PreferredMaintenanceWindow":{
+      "Type": "String",
+      "AllowedPattern": "(Mon|Tue|Wed|Thu|Fri|Sat|Sun):([01]?[0-9]|2[0-3]):[0-5][0-9]-(Mon|Tue|Wed|Thu|Fri|Sat|Sun):([01]?[0-9]|2[0-3]):[0-5][0-9]"
+    },
+    "SourceDBInstanceIdentifier":{
+      "Type": "String"
+    },
+    "CharacterSetName":{
+      "Type": "String"
+    },
+    {% endif %}
+    "MultiAZ": {
+      "Type": "String"
+    },
+    "BackupRetentionPeriod": {
+      "Type": "Number",
+      "Description": "The database backup retention period in days."
+    },
+    "KMSKeyId": {
+      "Type": "String",
+      "Default": "no"
+    },
+    "UseEncryption": {
+      "Type": "String"
+    },
+    "Engine": {
+      "Type": "String"
+    },
+    "DatabaseName": {
+      "AllowedPattern": "[a-zA-Z0-9]+",
+      "Type": "String"
+    },
+    "Port": {
+      "Type": "Number"
+    },
+    "EngineVersion": {
+      "Type": "String"
+    },
+    "InstanceType": {
+      "Default": "db.r3.large",
+      "AllowedValues": [
+        "db.r3.large",
+        "db.r3.xlarge",
+        "db.r3.2xlarge",
+        "db.r3.4xlarge",
+        "db.r3.8xlarge"
+      ],
+      "Description": "The instance type to use for the database.",
+      "Type": "String"
+    },
+    "MasterUserPassword": {
+      "Description": "The database admin account password.",
+      "MaxLength": "41",
+      "MinLength": "8",
+      "NoEcho": "true",
+      "Type": "String"
+    },
+    "MasterUsername": {
+      "AllowedPattern": "[a-zA-Z0-9]+_?[a-zA-Z0-9]+?",
+      "ConstraintDescription": "must contain only alphanumeric characters.",
+      "Description": "The database admin account user name.",
+      "MaxLength": "16",
+      "MinLength": "1",
+      "Type": "String"
+    },
+    "SubnetGroup": {
+      "Type": "String"
+    },
+    "SecurityGroups": {
+      "Type": "List<AWS::EC2::SecurityGroup::Id>",
+      "Description": "Security groups to apply to the RDS cluster."
+    },
+    "PubliclyAccessible":{
+      "Type": "String",
+      "AllowedValues": [
+        "true",
+        "false"
+      ]
+    },
+    "AllowMajorVersionUpgrade":{
+      "Type": "String",
+      "AllowedValues": [
+        "true",
+        "false"
+      ]
+    },
+    "AutoMinorVersionUpgrade":{
+      "Type": "String",
+      "AllowedValues": [
+        "true",
+        "false"
+      ]
+    },
+    "Timezone":{
+      "Type": "String"
+    },
+    "LicenseModel":{
+      "Type": "String"
+    },
+    "MonitoringRoleArn":{
+      "Type": "String"
+    },
+    "OptionGroupName":{
+      "Type": "String"
+    },
+    "MonitoringInterval":{
+      "Type": "Number"
+    },
+    "Domain":{
+      "Type": "String"
+    },
+    "DomainIAMRoleName":{
+      "Type": "String"
+    },
+    "Iops":{
+      "Type": "Number"
+    },
+    "DBInstanceClass":{
+      "Type": "String"
+    },
+    "TdeCredentialArn":{
+      "Type": "String"
+    },
+    "TdeCredentialPassword":{
+      "Type": "String"
+    },
+    "CopyTagsToSnapshot":{
+      "Type": "String",
+      "AllowedValues": [
+        "true",
+        "false"
+      ]
+    },
+    "DBParameterGroupName":{
+      "Type": "String"
+    }
+  },
+  "Conditions": {
+    {% if rds_deployment_type == 'cluster' %}
+    "UseClusterParameterGroupName": { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "ClusterParameterGroupName" } ]}] },
+    {% elif rds_deployment_type == 'instance' %}
+    "UseSourceDBInstanceIdentifier": { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "SourceDBInstanceIdentifier" } ]}] },
+    "UseCharacterSetName": { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "CharacterSetName" } ]}] },
+    {% endif %}
+    "UseEncryptedStorage" : { "Fn::Equals" : [ { "Ref" : "UseEncryption" }, "yes" ] },
+    "UseMultiAZ": { "Fn::Equals": [ "yes", { "Ref" : "MultiAZ" } ]},
+    "UseTimezone": { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "Timezone" } ]}] },
+    "UseLicenseModel": { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "LicenseModel" } ]}] },
+    "UseMonitoringRoleArn":  { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "MonitoringRoleArn" } ]}] },
+    "UseOptionGroupName": { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "OptionGroupName" } ]}] },
+    "UseMonitoringInterval": { "Fn::Not": [ { "Fn::Equals": [ 0, { "Ref" : "MonitoringInterval" } ]}] },
+    "UseDomain": { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "Domain" } ]}] },
+    "UseDomainIAMRoleName": { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "DomainIAMRoleName" } ]}] },
+    "UseIops": { "Fn::Not": [ { "Fn::Equals": [ 0, { "Ref" : "Iops" } ]}] },
+    "UseTdeCredentialArn": { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "TdeCredentialArn" } ]}] },
+    "UseTdeCredentialPassword": { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "TdeCredentialPassword" } ]}] },
+    "UseCopyTagsToSnapshot": { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "CopyTagsToSnapshot" } ]}] },
+    "UseParameterGroupName": { "Fn::Not": [ { "Fn::Equals": [ "", { "Ref" : "DBParameterGroupName" } ]}] },
+    "UseBackupRetentionPeriod": { "Fn::Not": [ { "Fn::Equals": [ 0, { "Ref" : "BackupRetentionPeriod" } ]}] }
+  },
+  "Resources": {
+
+{% if rds_deployment_type == 'cluster' %}
+    "Cluster": {
+      "Type": "AWS::RDS::DBCluster",
+      "Properties": {
+        "DBClusterParameterGroupName": {
+          "Fn::If" : [
+            "UseClusterParameterGroupName",
+            { "Ref": "ClusterParameterGroupName" },
+            { "Ref" : "AWS::NoValue" }
+          ]
+        },
+        "KmsKeyId": {
+          "Fn::If" : [
+            "UseEncryptedStorage",
+            {"Ref" : "KMSKeyId"},
+            {"Ref" : "AWS::NoValue"}
+          ]
+        },
+        "AvailabilityZones": {
+          "Fn::If" : [
+            "UseMultiAZ",
+            { "Ref": "ClusterAZs" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "BackupRetentionPeriod": {
+          "Fn::If" : [
+            "UseBackupRetentionPeriod",
+            { "Ref": "BackupRetentionPeriod" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "DatabaseName": {
+          "Ref": "DatabaseName"
+        },
+        "Engine": {
+          "Ref": "Engine"
+        },
+        "EngineVersion": {
+          "Ref": "EngineVersion"
+        },
+        "MasterUsername": {
+          "Ref": "MasterUsername"
+        },
+        "MasterUserPassword": {
+          "Ref": "MasterUserPassword"
+        },
+        "Port": {
+          "Ref": "Port"
+        },
+        "VpcSecurityGroupIds": {
+          "Ref": "SecurityGroups"
+        },
+        "DBSubnetGroupName": {
+          "Ref": "SubnetGroup"
+        }
+      }
+    },
+{% endif %}
+{% for n in range(rds_cluster_size | int) %}
+{% if rds_deployment_type == 'cluster' %}
+    "Database{{ n + 1 }}": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBClusterIdentifier": {
+          "Ref": "Cluster"
+        },
+{% elif rds_deployment_type == 'instance' %}
+    "{{ rds_db_resource_name }}": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "VPCSecurityGroups": {
+          "Ref": "SecurityGroups"
+        },
+        "AllocatedStorage": {
+          "Ref": "AllocatedStorage"
+        },
+        "MasterUsername": {
+          "Ref": "MasterUsername"
+        },
+        "DBName": {
+          "Ref": "DatabaseName"
+        },
+        "MasterUserPassword": {
+          "Ref": "MasterUserPassword"
+        },
+        "StorageType": {
+          "Ref": "StorageType"
+        },
+        "MultiAZ": {
+          "Fn::If" : [
+            "UseMultiAZ",
+            "True",
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "Port":{
+          "Ref": "Port"
+        },
+        "SourceDBInstanceIdentifier":{
+          "Fn::If" : [
+            "UseSourceDBInstanceIdentifier",
+            { "Ref": "SourceDBInstanceIdentifier" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "CharacterSetName":{
+          "Fn::If" : [
+            "UseCharacterSetName",
+            { "Ref": "CharacterSetName" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "BackupRetentionPeriod": {
+          "Fn::If" : [
+            "UseBackupRetentionPeriod",
+            { "Ref": "BackupRetentionPeriod" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+{% endif %}
+        "Engine": {
+          "Ref": "Engine"
+        },
+        "DBInstanceClass": {
+          "Ref": "InstanceType"
+        },
+        "DBSubnetGroupName": {
+          "Ref": "SubnetGroup"
+        },
+        "AllowMajorVersionUpgrade": {
+          "Ref": "AllowMajorVersionUpgrade"
+        },
+        "AutoMinorVersionUpgrade": {
+          "Ref": "AutoMinorVersionUpgrade"
+        },
+        "PubliclyAccessible":{
+          "Ref": "PubliclyAccessible"
+        },
+        "Timezone":{
+          "Fn::If" : [
+            "UseTimezone",
+            { "Ref": "Timezone" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "LicenseModel":{
+          "Fn::If" : [
+            "UseLicenseModel",
+            { "Ref": "LicenseModel" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "OptionGroupName": {
+          "Fn::If" : [
+            "UseOptionGroupName",
+            { "Ref": "OptionGroupName" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "LicenseModel": {
+          "Fn::If" : [
+            "UseLicenseModel",
+            { "Ref": "LicenseModel" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "Domain": {
+          "Fn::If" : [
+            "UseDomain",
+            { "Ref": "Domain" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "DomainIAMRoleName":{
+          "Fn::If" : [
+            "UseDomainIAMRoleName",
+            { "Ref": "DomainIAMRoleName" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "Iops":{
+          "Fn::If" : [
+            "UseIops",
+            { "Ref": "Iops" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "TdeCredentialArn":{
+          "Fn::If" : [
+            "UseTdeCredentialArn",
+            { "Ref": "TdeCredentialArn" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "TdeCredentialPassword":{
+          "Fn::If" : [
+            "UseTdeCredentialPassword",
+            { "Ref": "TdeCredentialPassword" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "CopyTagsToSnapshot":{
+          "Fn::If" : [
+            "UseCopyTagsToSnapshot",
+            { "Ref": "CopyTagsToSnapshot" },
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
+        "DBParameterGroupName": {
+          "Fn::If" : [
+            "UseParameterGroupName",
+            { "Ref": "DBParameterGroupName" },
+            { "Ref" : "AWS::NoValue" }
+          ]
+        }
+      }
+    }
+ {% if not loop.last %}, {% endif %}
+{% endfor %}
+
+  },
+  "Outputs":{
+    "RDSEndpoint" : {
+      "Value": {
+        "Fn::GetAtt": [ "{{ rds_deployment_resource_name }}", "Endpoint.Address"]
+      }
+    },
+    "RDSPort" : {
+      "Value": {
+        "Fn::GetAtt": [ "{{ rds_deployment_resource_name }}", "Endpoint.Port"]
+      }
+    },
+    "RDSName" : {
+      "Value": {
+        "Ref": "{{ rds_deployment_resource_name }}"
+      }
+    }
+  }
+}

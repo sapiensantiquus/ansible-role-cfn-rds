@@ -1,0 +1,5 @@
+- include: cluster.yml
+- include: cluster.yml rds_stack_state=absent rds_create_app_user=no
+
+- include: instance.yml
+- include: instance.yml rds_stack_state=absent rds_create_app_user=no
