@@ -40,6 +40,7 @@
     login_user: "{{ rds_username }}"
     login_password: "{{ rds_password }}"
     db: "{{ rds_db_name }}"
+    priv: "{{ rds_app_user_priv }}"
   when: rds_db_type == 'postgres' and rds_create_app_user == 'yes'
 
 - name: Create app user (mysql)
@@ -48,12 +49,13 @@
     login_host: "{{ rds_stack.stack_outputs.RDSEndpoint }}"
     login_user: "{{ rds_username }}"
     login_password: "{{ rds_password }}"
+    priv: "{{ rds_app_user_priv }}"
   when: rds_db_type == 'mysql' and rds_create_app_user == 'yes'
 
 - include: instance.yml
   when: rds_deployment_type == 'instance'
 
-- include: cluster.yml 
+- include: cluster.yml
   when: rds_deployment_type == 'cluster'
 
 - include: sg.yml sg_state=absent
