@@ -36,4 +36,5 @@
     disable_rollback: "{{ rds_disable_rollback }}"
     template: "{{ rds_template }}"
     state: "{{ rds_stack_state }}"
+    tags: "{{ rds_tags }}"
   register: rds_cluster
