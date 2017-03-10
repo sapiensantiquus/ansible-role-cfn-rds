@@ -1,0 +1,60 @@
+
+- name: Create necessary dirs
+  file:
+    state: directory
+    path: "{{ item }}"
+  with_items:
+    - "{{ rds_build_dir }}"
+
+- name: Build the CFN template
+  template:
+    src: "database.j2.json"
+    dest: "{{ rds_template }}"
+
+- include: sg.yml sg_state=present
+  when: rds_create_app_user == 'yes'
+
+- set_fact:
+    rds_app_user_security_groups: "{{ rds_create_app_user_sg | json_query('results[*].group_id') | join(',') }}"
+
+- debug: var=rds_app_user_security_groups
+
+- include: instance.yml rds_temp_sgs="{{ rds_app_user_security_groups }}"
+  when: rds_deployment_type == 'instance' and rds_create_app_user == 'yes'
+
+- include: cluster.yml rds_temp_sgs="{{ rds_app_user_security_groups }}"
+  when: rds_deployment_type == 'cluster' and rds_create_app_user == 'yes'
+
+- set_fact:
+    rds_stack: "{{ rds_cluster }}"
+  when: rds_deployment_type == 'cluster'
+
+- set_fact:
+    rds_stack: "{{ rds_instance }}"
+  when: rds_deployment_type == 'instance'
+
+- name: Create app user (postgres)
+  postgresql_user:
+    name: "{{ rds_app_user }}"
+    login_host: "{{ rds_stack.stack_outputs.RDSEndpoint }}"
+    login_user: "{{ rds_username }}"
+    login_password: "{{ rds_password }}"
+    db: "{{ rds_db_name }}"
+  when: rds_db_type == 'postgres' and rds_create_app_user == 'yes'
+
+- name: Create app user (mysql)
+  mysql_user:
+    name: "{{ rds_app_user }}"
+    login_host: "{{ rds_stack.stack_outputs.RDSEndpoint }}"
+    login_user: "{{ rds_username }}"
+    login_password: "{{ rds_password }}"
+  when: rds_db_type == 'mysql' and rds_create_app_user == 'yes'
+
+- include: instance.yml
+  when: rds_deployment_type == 'instance'
+
+- include: cluster.yml 
+  when: rds_deployment_type == 'cluster'
+
+- include: sg.yml sg_state=absent
+  when: rds_create_app_user == 'yes'
