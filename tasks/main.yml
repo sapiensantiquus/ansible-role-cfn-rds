@@ -8,7 +8,7 @@
 
 - name: Build the CFN template
   template:
-    src: "database.j2.json"
+    src: "rds.j2.json"
     dest: "{{ rds_template }}"
 
 - include: sg.yml sg_state=present
