@@ -23,6 +23,8 @@
             Ref: DatabaseInstanceType
           DBSubnetGroupName:
             Ref: DatabaseSubnetGroup
+    rds_tags:
+      "Name": "{{ rds_stack_name }}"
   pre_tasks:
     - debug: var=rds_subnet_group_name
   roles:

@@ -421,5 +421,22 @@
         "Ref": "{{ rds_deployment_resource_name }}"
       }
     }
+    ,
+{% if rds_deployment_type == 'instance' %}
+    "RDSInstance":{
+      "Value": {
+        "Ref": "{{ rds_db_resource_name }}"
+      }
+    }
+{% elif rds_deployment_type == 'cluster' %}
+{% for n in range(rds_cluster_size | int) %}
+    "RDSInstance{{ n }}":{
+      "Value": {
+        "Ref": "Database{{ n + 1 }}"
+      }
+    }
+ {% if not loop.last %}, {% endif %}
+{% endfor %}
+{% endif %}
   }
 }
