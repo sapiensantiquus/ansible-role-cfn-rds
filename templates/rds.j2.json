@@ -430,7 +430,7 @@
     }
 {% elif rds_deployment_type == 'cluster' %}
 {% for n in range(rds_cluster_size | int) %}
-    "RDSInstance{{ n }}":{
+    "RDSInstance{{ n + 1 }}":{
       "Value": {
         "Ref": "Database{{ n + 1 }}"
       }
