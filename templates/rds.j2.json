@@ -304,6 +304,13 @@
           ]
         },
 {% endif %}
+        "StorageEncrypted":{
+          "Fn::If" : [
+            "UseEncryptedStorage",
+            "true",
+            { "Ref" : "AWS::NoValue"}
+          ]
+        },
         "Engine": {
           "Ref": "Engine"
         },
