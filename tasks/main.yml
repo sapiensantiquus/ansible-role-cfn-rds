@@ -36,22 +36,33 @@
 - name: Create app user (postgres)
   postgresql_user:
     name: "{{ rds_app_user }}"
-    login_host: "{{ rds_stack.stack_outputs.RDSEndpoint }}"
+    login_host: "{{ item }}"
     login_user: "{{ rds_username }}"
     login_password: "{{ rds_password }}"
     db: "{{ rds_db_name }}"
     priv: "{{ rds_app_user_priv }}"
     role_attr_flags: "{{ rds_app_user_role_flags }}"
   when: rds_db_type == 'postgres' and rds_create_app_user == 'yes'
+  with_items: "{{ rds_endpoints }}"
 
+# We have to ignore errors due to some kind of bug in ansible.
 - name: Create app user (mysql)
   mysql_user:
     name: "{{ rds_app_user }}"
-    login_host: "{{ rds_stack.stack_outputs.RDSEndpoint }}"
+    password: "{{ rds_app_pass }}"
+    host: "{{ rds_app_user_host }}"
+    login_host: "{{ item }}"
     login_user: "{{ rds_username }}"
     login_password: "{{ rds_password }}"
     priv: "{{ rds_app_user_priv }}"
   when: rds_db_type == 'mysql' and rds_create_app_user == 'yes'
+  with_items: "{{ rds_endpoints }}"
+  ignore_errors: yes
+
+- name: Wait for SG to be removed from RDS stack
+  pause:
+    minutes: 1
+  when: rds_db_type == 'postgres' and rds_create_app_user == 'yes'
 
 - include: instance.yml
   when: rds_deployment_type == 'instance'
