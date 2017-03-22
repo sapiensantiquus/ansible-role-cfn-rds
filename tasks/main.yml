@@ -62,7 +62,7 @@
 - name: Wait for SG to be removed from RDS stack
   pause:
     minutes: 1
-  when: rds_db_type == 'postgres' and rds_create_app_user == 'yes'
+  when:  rds_create_app_user == 'yes'
 
 - include: instance.yml
   when: rds_deployment_type == 'instance'
