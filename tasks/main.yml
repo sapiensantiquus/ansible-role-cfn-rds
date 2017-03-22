@@ -59,16 +59,17 @@
   with_items: "{{ rds_endpoints }}"
   ignore_errors: yes
 
-- name: Wait for SG to be removed from RDS stack
-  pause:
-    minutes: 1
-  when:  rds_create_app_user == 'yes'
-
 - include: instance.yml
   when: rds_deployment_type == 'instance'
 
 - include: cluster.yml
   when: rds_deployment_type == 'cluster'
+
+
+- name: Wait for SG to be removed from RDS stack
+  pause:
+    minutes: 1
+  when:  rds_create_app_user == 'yes'
 
 - include: sg.yml sg_state=absent
   when: rds_create_app_user == 'yes'
